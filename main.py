@@ -6,6 +6,7 @@ from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
 from tqdm import tqdm
+import os
 #
 # ['rrc00', 'rrc01', 'rrc02', 'rrc03', 'rrc04', 'rrc05', 'rrc06',
 #                              'rrc07', 'rrc08', 'rrc09', 'rrc10', 'rrc11', 'rrc13', 'rrc14', 'rrc15' 'rrc16', 'rrc17',
@@ -48,9 +49,11 @@ class BGPDataProcessor:
         self.stream.parse_filter_string(filter_string)
         self.metadata = defaultdict(lambda: defaultdict(set))
         self.batch_duration = timedelta(minutes=batch_minutes)
-        self.csv_file_path = f'logs/{start_time}_{end_time}_{batch_minutes}.csv'
+        self.filename = f'{start_time}_{end_time}_{batch_minutes}'
+        self.csv_file_path = f'logs/{self.filename }/{self.filename}.csv'
         self.max_counts = []
         self.batch_labels = []
+        os.mkdir(f"logs/{self.filename}")
 
     def process_stream(self):
         batch_start_time = None
@@ -89,10 +92,11 @@ class BGPDataProcessor:
 
 
 class PlotCreator:
-    def __init__(self, batch_labels, max_counts, ip_version=4):
+    def __init__(self, batch_labels, max_counts, filename, ip_version=4):
         self.batch_labels = batch_labels
         self.max_counts = max_counts
         self.ip_version = ip_version
+        self.filename = filename
 
     def create_plot(self):
         # Creating the plot
@@ -109,13 +113,13 @@ class PlotCreator:
                           yaxis=dict(tickmode='auto'),
                           margin=dict(l=20, r=20, t=40, b=20),
                           paper_bgcolor="LightSteelBlue")
-        fig.show()
+        fig.write_html(f'logs/{self.filename}/{self.filename}.html')
 
 
 if __name__ == "__main__":
     processor = BGPDataProcessor("2024-02-01 07:00:00",
-                                 "2024-02-02 07:00:00",
-                                 batch_minutes=60)
+                                 "2024-02-01 07:02:00",
+                                 batch_minutes=1)
     processor.process_stream()
-    plotter = PlotCreator(processor.batch_labels, processor.max_counts)
+    plotter = PlotCreator(processor.batch_labels, processor.max_counts, processor.filename)
     plotter.create_plot()
